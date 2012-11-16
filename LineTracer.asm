@@ -58,6 +58,8 @@ BUSY        EQU     07h     ;BUSY FLAG (PORTD,7)
 
 ; ==== Moter Driver ====================
 MTRDRV      EQU     07h     ; PORTC
+DUTYA       EQU     15h     ; CCPR1L
+DUTYB       EQU     1Bh     ; CCPR2L
 ; ---- MTRDRV bits ---------------------
 ASTBY       EQU     00h 
 APWM        EQU     02h
@@ -77,18 +79,18 @@ PHOTB       EQU     01h
 
 
 ; ==================== 初期処理 =====================
-    org 0
-init
+    ORG     0
+INIT
     BSF     OSCCON,IRCF0    ;内部クロック8MHz
     BSF     OSCCON,IRCF1    ;内部クロック8MHz
     BSF     OSCCON,IRCF2    ;内部クロック8MHz
 
     BSF     STATUS,RP0      ;バンク１に切替え
-    MOVLW   0b00000000
+    MOVLW   b'00000000'
     MOVWF   TRISC
-    MOVLW   0b00000000      ;RD4-RD7は出力
+    MOVLW   b'00000000'     ;RD4-RD7は出力
     MOVWF   TRISD
-    MOVLW   0b11111000      ;RE0-RE2は出力
+    MOVLW   b'11111000'     ;RE0-RE2は出力
     MOVWF   TRISE
     BCF     STATUS,RP0      ;バンク０に切替え
 
@@ -105,6 +107,8 @@ init
 
     CALL    LCD_init        ;LCD 初期化
     CALL    ADC_INIT
+    CALL    MOTOR_INIT
+
 
     CALL    LCD_home        ;カーソルを１行目の先頭に
     MOVLW   'H'
@@ -185,6 +189,92 @@ MAINLP
 
     GOTO    MAINLP
 
+;***************
+;* MOTER Library *
+;***************
+;================= 初期化 ======================
+MOTOR_INIT
+    BANKSEL TRISC
+    CLRF    TRISC           ; moter driver
+    BANKSEL PORTC
+    CLRF    PORTC
+    BANKSEL T2CON
+    BSF     T2CON,TMR2ON
+    BCF     T2CON,T2CKPS1   ; prescaler is 1
+    BCF     T2CON,T2CKPS0   ; prescaler is 1
+    MOVLW   0FFH
+    BANKSEL PR2
+    MOVWF   PR2
+    BANKSEL CCP1CON
+    MOVLW   B'00001100'     ; PWM mode 
+    MOVWF   CCP1CON
+    BANKSEL CCP2CON
+    MOVLW   B'00001100'     ; PWM mode
+    MOVWF   CCP2CON
+
+    BANKSEL PORTC
+    BSF     PORTC,ASTBY
+    BSF     PORTC,BSTBY
+    RETURN
+
+MT_A_FW
+    BANKSEL PORTC
+    BSF     PORTC,AIN1
+    BCF     PORTC,AIN2
+    RETURN
+
+MT_A_BW
+    BANKSEL PORTC
+    BCF     PORTC,AIN1
+    BSF     PORTC,AIN2
+    RETURN
+
+MT_A_ST
+    BANKSEL PORTC
+    BCF     PORTC,AIN1
+    BCF     PORTC,AIN2
+    RETURN
+
+MT_A_BK
+    BANKSEL PORTC
+    BSF     PORTC,AIN1
+    BSF     PORTC,AIN2
+    RETURN
+
+MT_B_FW
+    BANKSEL PORTC
+    BSF     PORTC,BIN1
+    BCF     PORTC,BIN2
+    RETURN
+
+MT_B_BW
+    BANKSEL PORTC
+    BCF     PORTC,BIN1
+    BSF     PORTC,BIN2
+    RETURN
+
+MT_B_ST
+    BANKSEL PORTC
+    BCF     PORTC,BIN1
+    BCF     PORTC,BIN2
+    RETURN
+
+MT_B_BK
+    BANKSEL PORTC
+    BSF     PORTC,BIN1
+    BSF     PORTC,BIN2
+    RETURN
+
+SPEEDA
+    BANKSEL DUTYA
+    MOVWF   DUTYA
+    RETURN
+    
+SPEEDB
+    BANKSEL DUTYB
+    MOVWF   DUTYB
+    RETURN
+    
 
 ;***************
 ;* ADC Library *
