@@ -112,9 +112,38 @@ INIT
     CLRF    PORTD
     CLRF    PORTE
 
+    CALL    LCD_init
     CALL    ADC_INIT
     CALL    MOTOR_INIT
 
+
+    CALL    LCD_home        ;カーソルを１行目の先頭に
+    MOVLW   'H'
+    CALL    LCD_write
+    MOVLW   'e'
+    CALL    LCD_write
+    MOVLW   'l'
+    CALL    LCD_write
+    MOVLW   'l'
+    CALL    LCD_write
+    MOVLW   'o'
+    CALL    LCD_write
+    MOVLW   ','
+    CALL    LCD_write
+
+    CALL    LCD_2line       ;カーソルを２行目の先頭に
+    MOVLW   'w'
+    CALL    LCD_write
+    MOVLW   'o'
+    CALL    LCD_write
+    MOVLW   'r'
+    CALL    LCD_write
+    MOVLW   'l'
+    CALL    LCD_write
+    MOVLW   'd'
+    CALL    LCD_write
+    MOVLW   '!'
+    CALL    LCD_write
 
     CLRF    PORTD
     CLRF    PORTE
@@ -124,6 +153,7 @@ INIT
     CALL    wait15ms
     DECFSZ  CNT,F
     GOTO    $-2
+    CALL    LCD_clear
 
     CALL    MT_A_FW         ; motor A is forward
     CALL    MT_B_FW         ; motor B is forward
@@ -136,8 +166,15 @@ INIT
 ; ==================== メイン処理 =====================
 MAINLP
 LEFT_MOTOR
+    CALL    LCD_home
+    MOVLW   'A'
+    CALL    LCD_write
+    MOVLW   ':'
+    CALL    LCD_write
+
     CALL    READ_PHOTA          ; black is 255 and white is 0
     MOVWF   BW
+    CALL    DISP3
     MOVLW   BW_TH
     SUBWF   BW,F
     BTFSS   STATUS,C
@@ -150,8 +187,15 @@ LEFT_WHITE
 LEFT_END
 
 RIGHT_MOTOR
+    CALL    LCD_2line
+    MOVLW   'B'
+    CALL    LCD_write
+    MOVLW   ':'
+    CALL    LCD_write
+
     CALL    READ_PHOTB          ; black is 255 and white is 0
     MOVWF   BW
+    CALL    DISP3
     MOVLW   BW_TH
     SUBWF   BW,F
     BTFSS   STATUS,C
