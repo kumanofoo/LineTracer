@@ -28,11 +28,11 @@
 
     CBLOCK  020h
     CNT
-    CNTsmp          ; counter for sample time
-    CNT15mS         ;15ｍＳカウンタ
-    CNT5mS          ;5ｍＳカウンタ
-    CNT1mS          ;1ｍＳカウンタ
-    CNT50uS         ;50μＳカウンタ
+    CNTsmp          ;counter for sample time
+    CNT15mS         ;15msカウンタ
+    CNT5mS          ;5msカウンタ
+    CNT1mS          ;1msカウンタ
+    CNT50uS         ;50usカウンタ
     char            ;LCD表示データ
     CNTfig
     FIG1
@@ -116,10 +116,7 @@ INIT
     CALL    MOTOR_INIT
 
 
-    CLRF    PORTD
-    CLRF    PORTE
-
-    MOVLW   D'200'
+    MOVLW   D'200'          ; wait 3 seconds
     MOVWF   CNT
     CALL    wait15ms
     DECFSZ  CNT,F
@@ -135,15 +132,48 @@ INIT
 
 ; ==================== メイン処理 =====================
 MAINLP
+
+;==== single mode ===================================================
+; turn left if left is black
+; turn right if left is white
+;--------------------------------------------------------------------
+SINGLE_MODE
 LEFT_MOTOR
     CALL    READ_PHOTA          ; black is 255 and white is 0
     MOVWF   BW
     MOVLW   BW_TH
-    SUBWF   BW,F
-    BTFSS   STATUS,C
+    SUBWF   BW,F                ; BW-BW_TH
+    BTFSS   STATUS,C            ; C=1 if (BW-BW_TH) >= 0
     GOTO    LEFT_WHITE
 LEFT_BLACK
-    CALL    MT_A_BK
+    CALL    MT_A_BK             ; turn right motor if left is black
+    CALL    MT_B_FW
+    GOTO    LEFT_END
+LEFT_WHITE
+    CALL    MT_A_FW             ; turn left motor if left is white
+    CALL    MT_B_BK
+    GOTO    LEFT_END
+LEFT_END
+
+    GOTO    MAINLP
+
+
+;==== simple mode ===================================================
+; move forward if left is white and right is white  
+; turn left if left is black and right is white  
+; turn right if left is white and right is black  
+; stop if left is black and right is black  
+;--------------------------------------------------------------------
+SIMPLE_MODE
+LEFT_MOTOR
+    CALL    READ_PHOTA          ; black is 255 and white is 0
+    MOVWF   BW
+    MOVLW   BW_TH
+    SUBWF   BW,F                ; BW-BW_TH
+    BTFSS   STATUS,C            ; C=1 if (BW-BW_TH) >= 0
+    GOTO    LEFT_WHITE
+LEFT_BLACK
+    CALL    MT_A_BK             ; stop left motor if left is black
     GOTO    LEFT_END
 LEFT_WHITE
     CALL    MT_A_FW
@@ -153,17 +183,17 @@ RIGHT_MOTOR
     CALL    READ_PHOTB          ; black is 255 and white is 0
     MOVWF   BW
     MOVLW   BW_TH
-    SUBWF   BW,F
-    BTFSS   STATUS,C
+    SUBWF   BW,F                ; BW-BW_TH
+    BTFSS   STATUS,C            ; C=1 if (BW-BW_TH) >= 0
     GOTO    RIGHT_WHITE
 RIGHT_BLACK
-    CALL    MT_B_BK
+    CALL    MT_B_BK             ; stop right motor if rigit is black
     GOTO    RIGHT_END
 RIGHT_WHITE
     CALL    MT_B_FW
 RIGHT_END
+    GOTO    SIMPLE_MODE
 
-    GOTO    MAINLP
 
 ;*****************
 ;* Motor Library *
