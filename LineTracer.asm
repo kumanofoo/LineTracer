@@ -56,26 +56,28 @@ RS          EQU     02h     ;LCD Register Select
 BUSY        EQU     07h     ;BUSY FLAG (PORTD,7)
 
 
-; ==== Moter Driver ====================
+; ==== Motor Driver ====================
 MTRDRV      EQU     07h     ; PORTC
 DUTYA       EQU     15h     ; CCPR1L
 DUTYB       EQU     1Bh     ; CCPR2L
 ; ---- MTRDRV bits ---------------------
-ASTBY       EQU     00h 
+ASTBY       EQU     00h     ; LEFT MOTOR
 APWM        EQU     02h
 AIN1        EQU     04h
 AIN2        EQU     05h
-BSTBY       EQU     03h
+BSTBY       EQU     03h     ; RIGHT MOTOR
 BPWM        EQU     01h
 BIN1        EQU     06h
 BIN2        EQU     07h
 
 
 ; ==== Photo Interrupter ===============
+; value of black is 255 and white is 0
+; -------------------------------------- 
 PHOTINT     EQU     05h     ; PORTA
 ; ---- PHOTINT bits --------------------
-PHOTA       EQU     00h
-PHOTB       EQU     01h
+PHOTA       EQU     00h     ; LEFT
+PHOTB       EQU     01h     ; RIGHT
 
 
 ; ==================== èâä˙èàóù =====================
@@ -105,7 +107,7 @@ INIT
     CLRF    PORTD
     CLRF    PORTE
 
-    CALL    LCD_init        ;LCD èâä˙âª
+    CALL    LCD_init
     CALL    ADC_INIT
     CALL    MOTOR_INIT
 
@@ -148,6 +150,9 @@ INIT
     GOTO    $-2
     CALL    LCD_clear
 
+    CALL    MT_A_FW         ; motor A is forward
+    CALL    MT_B_FW         ; motor B is forward
+
 ; ==================== ÉÅÉCÉìèàóù =====================
 MAINLP
     CALL    LCD_home
@@ -156,7 +161,8 @@ MAINLP
     MOVLW   ':'
     CALL    LCD_write
 
-    CALL    READ_PHOTA
+    CALL    READ_PHOTA          ; black is 255 and white is 0
+    MOVWF   DUTYA               ; set motor A duty cycle
     CALL    BCD
     MOVLW   30H
     ADDWF   FIG100,W
@@ -175,7 +181,8 @@ MAINLP
     MOVLW   ':'
     CALL    LCD_write
 
-    CALL    READ_PHOTB
+    CALL    READ_PHOTB          ; black is 255 and white is 0
+    MOVWF   DUTYB               ; set motor B duty cycle
     CALL    BCD
     MOVLW   30H
     ADDWF   FIG100,W
@@ -189,13 +196,13 @@ MAINLP
 
     GOTO    MAINLP
 
-;***************
-;* MOTER Library *
-;***************
+;*****************
+;* Motor Library *
+;*****************
 ;================= èâä˙âª ======================
 MOTOR_INIT
     BANKSEL TRISC
-    CLRF    TRISC           ; moter driver
+    CLRF    TRISC           ; motor driver
     BANKSEL PORTC
     CLRF    PORTC
     BANKSEL T2CON
@@ -212,7 +219,15 @@ MOTOR_INIT
     MOVLW   B'00001100'     ; PWM mode
     MOVWF   CCP2CON
 
+    BANKSEL CCPR1L
+    CLRF    CCPR1L          ; motor A duty cycle 0%
+    BANKSEL CCPR2L
+    CLRF    CCPR2L          ; motor B duty cycle 0%
     BANKSEL PORTC
+    BCF     PORTC,AIN1      ; motor A is stop
+    BCF     PORTC,AIN2
+    BCF     PORTC,BIN1      ; motor B is stop
+    BCF     PORTC,BIN2
     BSF     PORTC,ASTBY
     BSF     PORTC,BSTBY
     RETURN
